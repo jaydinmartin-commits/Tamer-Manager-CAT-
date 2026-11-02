@@ -2,7 +2,7 @@
   "id": "tamer-manager-cat",
   "title": "Tamer CAT Automations",
   "description": "CAT-based automation support for Loot Tavern's manually entered Tamer class, beginning with Pocket Familiar.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
@@ -16,7 +16,6 @@
     "systems": [
       {
         "id": "dnd5e",
-        "type": "system",
         "compatibility": {
           "minimum": "6.0.0"
         }
