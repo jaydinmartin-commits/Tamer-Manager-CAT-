@@ -1,13 +1,16 @@
 /**
  * Tamer CAT Automations
- * Milestone 0.1 bootstrap.
  *
- * The Loot Tavern Tamer class is entered manually by the user. This module
- * therefore never relies on a hard-coded class or compendium UUID.
- * Feature discovery starts from items already present on the actor.
+ * The Loot Tavern Tamer class and its features are entered manually by the
+ * user. This module therefore discovers feature items already on world actors
+ * and never depends on a Loot Tavern compendium UUID.
  */
 
-import { registerPocketFamiliar } from "./pocket-familiar.mjs";
+import {
+  isPocketFamiliarItem,
+  registerPocketFamiliar,
+  registerPocketFamiliarItem
+} from "./pocket-familiar.mjs";
 
 const MODULE_ID = "tamer-manager-cat";
 
@@ -19,30 +22,30 @@ Hooks.once("init", () => {
     version: game.modules.get(MODULE_ID)?.version ?? "unknown",
     features: {}
   };
+
+  Hooks.on("createItem", item => {
+    if (globalThis.cat?.api && isPocketFamiliarItem(item)) {
+      registerPocketFamiliarItem(item);
+    }
+  });
+
+  Hooks.on("updateItem", item => {
+    if (globalThis.cat?.api && isPocketFamiliarItem(item)) {
+      registerPocketFamiliarItem(item);
+    }
+  });
 });
 
-Hooks.once("ready", () => {
-  const catModule = game.modules.get("cat");
-
-  if (!catModule?.active) {
-    ui.notifications?.warn("Tamer CAT Automations requires CAT to be enabled.");
-    return;
-  }
-
-  if (!globalThis.cat?.api) {
-    ui.notifications?.warn("Tamer CAT Automations could not find the CAT API.");
-    return;
-  }
-
+// CAT exposes its completed automation registry through catReady.
+Hooks.once("catReady", () => {
   globalThis.TamerCATAutomations.cat = globalThis.cat;
 
-  // Pocket Familiar is discovered from the manually entered class feature.
-  // No Loot Tavern compendium UUID is assumed.
   globalThis.TamerCATAutomations.features.pocketFamiliar = {
-    register: registerPocketFamiliar
+    register: registerPocketFamiliar,
+    registerItem: registerPocketFamiliarItem
   };
 
   registerPocketFamiliar();
 
-  console.log(`${MODULE_ID} | CAT detected; Pocket Familiar integration bootstrap ready.`);
+  console.log(`${MODULE_ID} | CAT ready; Pocket Familiar items registered for CAT Shield configuration.`);
 });
