@@ -24,11 +24,10 @@ jobs:
       - name: Publish installable Foundry release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.2
-          name: Tamer CAT Automations v0.1.2
+          tag_name: v0.2.0
+          name: Tamer CAT Automations v0.2.0
           body: |
-            Initial installable Foundry VTT module package.
-            This is an early installation and bootstrap test; Pocket Familiar summon behavior is not yet declared complete.
+            Adds the Pocket Familiar Homebrew configuration and synchronizes its settings into CAT's native summon generic.
           files: |
             dist/module.zip
             module.json
