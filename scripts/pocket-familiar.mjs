@@ -172,7 +172,7 @@ export async function registerPocketFamiliar() {
     source: SOURCE,
     version: VERSION,
     generic: {source: "cat", identifier: "summon"},
-    config: getAutomationConfig(findPocketFamiliarItems(game.actors?.contents?.[0])[0]),
+    config: CONFIG,
     isItem: isPocketFamiliarItem,
     findOnActor: findPocketFamiliarItems,
     registerItem: registerPocketFamiliarItem,
