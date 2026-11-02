@@ -1,42 +1,85 @@
 /**
  * Pocket Familiar CAT integration.
  *
- * Milestone 0.1 deliberately supports world-created feature items. The
- * Tamer class and Pocket Familiar feature are entered manually, so this
- * module does not require a Loot Tavern compendium UUID.
- *
- * CAT registration remains isolated here until the current public
- * registration schema is verified against CAT's implementation.
+ * The Loot Tavern Tamer and its features are entered manually in Foundry.
+ * CAT supports this: an item with no CAT source matches a registered
+ * automation only when the registered UUID is that exact world item UUID.
  */
 
 const SOURCE = "tamer-manager-cat";
 const IDENTIFIER = "pocket-familiar";
-const RULES = "2024";
+const VERSION = "0.1.0";
 
 /**
  * Identifies manually created Pocket Familiar feature items.
- *
- * We intentionally use a conservative name match for the first milestone.
- * Future versions can expose explicit item binding once the CAT Shield
- * binding contract is implemented.
  */
 export function isPocketFamiliarItem(item) {
-  if (!item) return false;
-
-  return item.name?.trim().toLowerCase() === "pocket familiar";
+  return item?.name?.trim().toLowerCase() === "pocket familiar";
 }
 
 /**
- * Returns Pocket Familiar feature items already present on an actor.
- * This works for manually entered classes and does not depend on a
- * compendium, source UUID, or imported package.
+ * Finds Pocket Familiar items already embedded on world actors.
  */
 export function findPocketFamiliarItems(actor) {
-  if (!actor?.items) return [];
-
-  return actor.items.filter(isPocketFamiliarItem);
+  return actor?.items?.filter(isPocketFamiliarItem) ?? [];
 }
 
+function getRules(item) {
+  return item?.system?.source?.rules;
+}
+
+function getIdentifier(item) {
+  return item?.system?.identifier;
+}
+
+/**
+ * Register one manually entered Pocket Familiar item with CAT.
+ *
+ * The item's own UUID is intentionally used. CAT's current matching contract
+ * explicitly supports source-less world items by matching the registered UUID.
+ */
+export function registerPocketFamiliarItem(item) {
+  const api = globalThis.cat?.api;
+  if (!api?.registerAutomation || !isPocketFamiliarItem(item)) return false;
+
+  const rules = getRules(item);
+  const identifier = getIdentifier(item);
+
+  if (!rules || !identifier) {
+    console.warn(
+      `${SOURCE} | Pocket Familiar on ${item.actor?.name ?? "unknown actor"} requires a D&D5e item identifier and rules edition before CAT can register it.`
+    );
+    return false;
+  }
+
+  return api.registerAutomation({
+    source: SOURCE,
+    rules,
+    identifier,
+    version: VERSION,
+    uuid: item.uuid,
+    type: item.type,
+    config: {
+      summons: {
+        default: [],
+        type: "selectSummons",
+        category: "homebrew",
+        label: "Pocket Familiar"
+      },
+      replaceExisting: {
+        default: true,
+        type: "checkbox",
+        category: "behavior",
+        label: "Replace Existing Familiar"
+      }
+    }
+  });
+}
+
+/**
+ * Register every manually entered Pocket Familiar currently present in the
+ * world. New copies are registered when they are created or updated.
+ */
 export function registerPocketFamiliar() {
   const api = globalThis.cat?.api;
   if (!api?.registerAutomation) {
@@ -44,23 +87,32 @@ export function registerPocketFamiliar() {
     return false;
   }
 
+  const results = [];
+  for (const actor of game.actors ?? []) {
+    for (const item of findPocketFamiliarItems(actor)) {
+      results.push(registerPocketFamiliarItem(item));
+    }
+  }
+
   globalThis.TamerCATAutomations ??= { features: {} };
   globalThis.TamerCATAutomations.features.pocketFamiliar = {
     identifier: IDENTIFIER,
     source: SOURCE,
-    rules: RULES,
+    version: VERSION,
     isItem: isPocketFamiliarItem,
-    findOnActor: findPocketFamiliarItems
+    findOnActor: findPocketFamiliarItems,
+    registerItem: registerPocketFamiliarItem
   };
 
-  console.log(`${SOURCE} | Pocket Familiar integration ready for manually entered feature items.`);
-  return true;
+  console.log(`${SOURCE} | Registered ${results.filter(Boolean).length} manually entered Pocket Familiar item(s) with CAT.`);
+  return results.every(Boolean);
 }
 
 export const pocketFamiliar = {
   source: SOURCE,
   identifier: IDENTIFIER,
-  rules: RULES,
+  version: VERSION,
   isPocketFamiliarItem,
-  findPocketFamiliarItems
+  findPocketFamiliarItems,
+  registerPocketFamiliarItem
 };
