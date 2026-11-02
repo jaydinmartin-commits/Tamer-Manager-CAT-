@@ -2,18 +2,17 @@
  * Pocket Familiar CAT integration.
  *
  * The Loot Tavern Tamer and its features are entered manually in Foundry.
- * Each world-created Pocket Familiar is registered against its own UUID.
+ * This module therefore discovers Pocket Familiar items on actors rather than
+ * requiring a Loot Tavern compendium.
  *
- * Summoning is delegated to CAT's existing generic summon automation. This
- * module only discovers the feature, registers it with CAT, and prepares the
- * generic summon configuration on the manually entered item.
+ * CAT registration is intentionally kept separate from summon execution.
+ * CAT's generic summon configuration contract is still being mapped against
+ * the current source; no guessed flag paths are written to user items.
  */
 
 const SOURCE = "tamer-manager-cat";
 const IDENTIFIER = "pocket-familiar";
 const VERSION = "0.1.0";
-const GENERIC_SOURCE = "cat";
-const GENERIC_IDENTIFIER = "summon";
 
 export function isPocketFamiliarItem(item) {
   return item?.name?.trim().toLowerCase() === "pocket familiar";
@@ -31,51 +30,14 @@ function getIdentifier(item) {
   return item?.system?.identifier;
 }
 
-function getFirstActivityId(item) {
-  return item?.system?.activities?.contents?.[0]?.id
-    ?? item?.system?.activities?.[0]?.id;
-}
-
 /**
- * Prepare CAT's generic summon configuration without overwriting choices the
- * user has already made in CAT Shield.
+ * Register a manually entered Pocket Familiar item with CAT.
  *
- * The empty summons list is intentional: CAT Shield's native selectSummons
- * control owns familiar-source selection. Once configured, CAT's summon
- * generic handles creation, replacement, placement, and tracking.
+ * Registration uses the feature's real D&D5e identifier and its exact world
+ * item UUID. No summon configuration is written here until the current CAT
+ * generic configuration schema and invocation contract are verified.
  */
-export async function prepareSummonConfig(item) {
-  if (!item?.update) return false;
-
-  const existing = item.flags?.cat?.genericConfig?.[GENERIC_SOURCE]?.[GENERIC_IDENTIFIER] ?? {};
-  const activityId = existing.activityId ?? getFirstActivityId(item);
-
-  const defaults = {
-    activityId: activityId ?? "",
-    summons: existing.summons ?? [],
-    range: existing.range ?? 30,
-    replaceExisting: existing.replaceExisting ?? true
-  };
-
-  const changes = {};
-  for (const [key, value] of Object.entries(defaults)) {
-    if (existing[key] === undefined) {
-      changes[`flags.cat.genericConfig.${GENERIC_SOURCE}.${GENERIC_IDENTIFIER}.${key}`] = value;
-    }
-  }
-
-  if (!Object.keys(changes).length) return true;
-  await item.update(changes);
-  return true;
-}
-
-/**
- * Register one manually entered Pocket Familiar item with CAT.
- *
- * CAT's current matching contract supports source-less world items by
- * matching the registered UUID to the exact item UUID.
- */
-export async function registerPocketFamiliarItem(item) {
+export function registerPocketFamiliarItem(item) {
   const api = globalThis.cat?.api;
   if (!api?.registerAutomation || !isPocketFamiliarItem(item)) return false;
 
@@ -89,7 +51,7 @@ export async function registerPocketFamiliarItem(item) {
     return false;
   }
 
-  const registered = api.registerAutomation({
+  return api.registerAutomation({
     source: SOURCE,
     rules,
     identifier,
@@ -97,9 +59,6 @@ export async function registerPocketFamiliarItem(item) {
     uuid: item.uuid,
     type: item.type
   });
-
-  if (registered) await prepareSummonConfig(item);
-  return registered;
 }
 
 export async function registerPocketFamiliar() {
@@ -112,7 +71,7 @@ export async function registerPocketFamiliar() {
   const results = [];
   for (const actor of game.actors ?? []) {
     for (const item of findPocketFamiliarItems(actor)) {
-      results.push(await registerPocketFamiliarItem(item));
+      results.push(registerPocketFamiliarItem(item));
     }
   }
 
@@ -121,11 +80,9 @@ export async function registerPocketFamiliar() {
     identifier: IDENTIFIER,
     source: SOURCE,
     version: VERSION,
-    generic: {source: GENERIC_SOURCE, identifier: GENERIC_IDENTIFIER},
     isItem: isPocketFamiliarItem,
     findOnActor: findPocketFamiliarItems,
-    registerItem: registerPocketFamiliarItem,
-    prepareSummonConfig
+    registerItem: registerPocketFamiliarItem
   };
 
   console.log(`${SOURCE} | Registered ${results.filter(Boolean).length} manually entered Pocket Familiar item(s) with CAT.`);
@@ -136,9 +93,7 @@ export const pocketFamiliar = {
   source: SOURCE,
   identifier: IDENTIFIER,
   version: VERSION,
-  generic: {source: GENERIC_SOURCE, identifier: GENERIC_IDENTIFIER},
   isPocketFamiliarItem,
   findPocketFamiliarItems,
-  registerPocketFamiliarItem,
-  prepareSummonConfig
+  registerPocketFamiliarItem
 };
