@@ -69,6 +69,16 @@ function getHomebrewConfig(item) {
   return item?.flags?.cat?.config ?? {};
 }
 
+function getAutomationConfig(item) {
+  return {
+    ...CONFIG,
+    summonActivity: {
+      ...CONFIG.summonActivity,
+      default: getFirstActivityId(item)
+    }
+  };
+}
+
 /**
  * Attach CAT's native summon generic and synchronize the Pocket Familiar
  * Homebrew settings into the generic configuration consumed by CAT.
@@ -127,6 +137,7 @@ export async function registerPocketFamiliarItem(item) {
     return false;
   }
 
+  const config = getAutomationConfig(item);
   const registered = api.registerAutomation({
     source: SOURCE,
     rules,
@@ -134,7 +145,7 @@ export async function registerPocketFamiliarItem(item) {
     version: VERSION,
     uuid: item.uuid,
     type: item.type,
-    config: CONFIG
+    config
   });
 
   if (registered) await prepareSummonGeneric(item);
@@ -161,7 +172,7 @@ export async function registerPocketFamiliar() {
     source: SOURCE,
     version: VERSION,
     generic: {source: "cat", identifier: "summon"},
-    config: CONFIG,
+    config: getAutomationConfig(findPocketFamiliarItems(game.actors?.contents?.[0])[0]),
     isItem: isPocketFamiliarItem,
     findOnActor: findPocketFamiliarItems,
     registerItem: registerPocketFamiliarItem,
