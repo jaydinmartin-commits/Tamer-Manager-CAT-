@@ -3,12 +3,45 @@
  *
  * The Loot Tavern Tamer and its features are entered manually in Foundry.
  * CAT's native summon generic performs all summon creation, replacement,
- * placement, and source tracking.
+ * placement, and source tracking. The automation's Homebrew configuration
+ * is the user-facing source of truth for the Pocket Familiar summon setup;
+ * its values are synchronized into CAT's native generic summon flags.
  */
 
 const SOURCE = "tamer-manager-cat";
 const IDENTIFIER = "pocket-familiar";
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
+
+const CONFIG = {
+  summonActivity: {
+    default: "",
+    type: "selectActivity",
+    category: "homebrew",
+    label: "Summon Activity",
+    hint: "The item activity that triggers the Pocket Familiar summon."
+  },
+  companions: {
+    default: [],
+    type: "selectSummons",
+    category: "homebrew",
+    label: "Companion Profiles",
+    hint: "Choose the creature actor or actors CAT should create when this activity is used."
+  },
+  placementRange: {
+    default: 30,
+    type: "number",
+    category: "homebrew",
+    label: "Placement Range",
+    hint: "Maximum distance from the summoner for placing the companion, in feet."
+  },
+  replaceExisting: {
+    default: true,
+    type: "checkbox",
+    category: "homebrew",
+    label: "Replace Existing Familiar",
+    hint: "Dismiss a companion created by this Pocket Familiar before creating its replacement."
+  }
+};
 
 export function isPocketFamiliarItem(item) {
   return item?.name?.trim().toLowerCase() === "pocket familiar";
@@ -32,17 +65,22 @@ function getFirstActivityId(item) {
     ?? "";
 }
 
+function getHomebrewConfig(item) {
+  return item?.flags?.cat?.config ?? {};
+}
+
 /**
- * Attach CAT's verified native summon generic to the manually entered item.
+ * Attach CAT's native summon generic and synchronize the Pocket Familiar
+ * Homebrew settings into the generic configuration consumed by CAT.
  *
- * Generic configuration belongs on flags.cat.genericConfig.cat.summon.
- * We only provide missing defaults so CAT Shield remains the owner of the
- * user's summon selection and later configuration.
+ * Existing generic settings are retained unless the corresponding Homebrew
+ * setting has been explicitly saved on the item.
  */
 export async function prepareSummonGeneric(item) {
   if (!item?.setFlag) return false;
 
   const existing = item.flags?.cat?.genericConfig?.cat?.summon ?? {};
+  const homebrew = getHomebrewConfig(item);
   const defaults = {
     activityId: getFirstActivityId(item),
     summons: [],
@@ -50,7 +88,21 @@ export async function prepareSummonGeneric(item) {
     replaceExisting: true
   };
 
-  const merged = {...defaults, ...existing};
+  const merged = {
+    ...defaults,
+    ...existing,
+    activityId: homebrew.summonActivity
+      || existing.activityId
+      || getFirstActivityId(item),
+    summons: Array.isArray(homebrew.companions)
+      ? homebrew.companions
+      : (existing.summons ?? []),
+    range: homebrew.placementRange ?? existing.range ?? defaults.range,
+    replaceExisting: homebrew.replaceExisting
+      ?? existing.replaceExisting
+      ?? defaults.replaceExisting
+  };
+
   if (JSON.stringify(existing) === JSON.stringify(merged)) return true;
 
   await item.setFlag("cat", "genericConfig.cat.summon", merged);
@@ -58,8 +110,8 @@ export async function prepareSummonGeneric(item) {
 }
 
 /**
- * Register a manually entered Pocket Familiar item with CAT and prepare its
- * native generic summon configuration.
+ * Register a manually entered Pocket Familiar item with CAT and expose its
+ * dedicated Homebrew configuration in CAT's Configuration tab.
  */
 export async function registerPocketFamiliarItem(item) {
   const api = globalThis.cat?.api;
@@ -81,7 +133,8 @@ export async function registerPocketFamiliarItem(item) {
     identifier,
     version: VERSION,
     uuid: item.uuid,
-    type: item.type
+    type: item.type,
+    config: CONFIG
   });
 
   if (registered) await prepareSummonGeneric(item);
@@ -108,6 +161,7 @@ export async function registerPocketFamiliar() {
     source: SOURCE,
     version: VERSION,
     generic: {source: "cat", identifier: "summon"},
+    config: CONFIG,
     isItem: isPocketFamiliarItem,
     findOnActor: findPocketFamiliarItems,
     registerItem: registerPocketFamiliarItem,
@@ -123,6 +177,7 @@ export const pocketFamiliar = {
   identifier: IDENTIFIER,
   version: VERSION,
   generic: {source: "cat", identifier: "summon"},
+  config: CONFIG,
   isPocketFamiliarItem,
   findPocketFamiliarItems,
   registerPocketFamiliarItem,
