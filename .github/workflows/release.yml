@@ -1,0 +1,36 @@
+name: Build Foundry module release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate manifest and package module
+        run: |
+          python -m json.tool module.json >/dev/null
+          mkdir -p dist/tamer-manager-cat
+          cp module.json README.md dist/tamer-manager-cat/
+          cp -R scripts dist/tamer-manager-cat/
+          cd dist
+          zip -qr module.zip tamer-manager-cat
+      - name: Publish installable Foundry release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0
+          name: Tamer CAT Automations v0.1.0
+          body: |
+            Initial installable Foundry VTT module package.
+            This is an early installation and bootstrap test; Pocket Familiar summon behavior is not yet declared complete.
+          files: |
+            dist/module.zip
+            module.json
+          make_latest: true
+          fail_on_unmatched_files: true
