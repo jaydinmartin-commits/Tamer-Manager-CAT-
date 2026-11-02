@@ -1,29 +1,29 @@
 # Tamer CAT Automations
 
-A separate CAT-based automation project for Loot Tavern's Tamer class.
+A separate CAT-based automation project for Loot Tavern's Tamer class. The Tamer class and feature items are entered manually by the user; this module does not require a Loot Tavern compendium UUID.
 
-## Milestone 0.1: Pocket Familiar
+## Pocket Familiar — Homebrew configuration
 
-The first milestone is intentionally narrow:
+The Pocket Familiar automation registers a dedicated **Homebrew** section in CAT's Configuration tab with:
 
-1. Detect CAT and register manually entered Pocket Familiar feature items.
-2. Prepare CAT's native generic summon configuration without replacing CAT's summon system.
-3. Support the Tamer class being entered manually into Foundry.
-4. Establish the configuration path before adding Tamer-specific familiar validation.
+- **Summon Activity** — selects the Pocket Familiar item activity that triggers the summon.
+- **Companion Profiles** — selects one or more creature actors, including actors chosen from a compendium.
+- **Placement Range** — sets the placement distance in feet.
+- **Replace Existing Familiar** — controls whether a previous familiar created by this item is dismissed before a replacement is created.
 
-This project does **not** depend on or modify the defunct Tamer Manager project.
+These values are synchronized into CAT's native `cat|summon` generic configuration. CAT remains responsible for summon creation, placement, source tracking, and dismissal. The Generic Automations tab remains available as CAT's native configuration surface.
 
-## Current test status
+## Current limitations
 
-The module scaffold and CAT registration path are in place. **Do not test summoning yet.** The next implementation step is to verify the final CAT Shield configuration presentation and the invocation path into CAT's summon generic.
+This milestone establishes the configuration UI and its handoff to CAT's native summon generic. The complete summon flow still requires in-world verification, including actor selection persistence, correct activity matching, placement range, and replacement behavior. Do not treat the feature as production-ready until those tests pass.
 
 ## Test environment
 
 - Foundry VTT v14
 - D&D5e v6.x
-- CAT
+- Covens Automation Toolkit (CAT)
 - Midi-QOL where required by CAT
 
-## When testing begins
+## Project isolation
 
-The first requested test will be limited to installation, module loading, CAT detection, and recognition of a manually entered Pocket Familiar item. Summoning will be tested only after the configuration-to-generic-summon handoff is complete.
+This repository is separate from the defunct Tamer Manager project and does not modify or depend on it.
